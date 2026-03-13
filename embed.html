@@ -1,0 +1,305 @@
+<div id="pricing-calculator"></div>
+
+<script>
+(() => {
+  const SHEET_ID = "14IzEE5BoAaybc7soOYSOmLjCaTwIgf1AmsteR4FZBXk";
+  const GID = "0";
+  const FORM_URL = "https://thewillowseventcenter.tripleseat.com/party_request/14786";
+
+  // Pull only the cells we care about: columns B:C, rows 1:12
+  const DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}&range=B1:C12`;
+
+  const root = document.getElementById("pricing-calculator");
+
+  const money = n => new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(Number(n || 0));
+
+  const cleanHex = (v, fallback) => {
+    const m = String(v || "").trim().replace(/^#/, "").match(/^[0-9a-fA-F]{6}$/);
+    return m ? m[0] : fallback;
+  };
+
+  const parseCSV = text => {
+    const rows = [];
+    let row = [];
+    let cell = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      const next = text[i + 1];
+
+      if (ch === '"') {
+        if (inQuotes && next === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        row.push(cell);
+        cell = "";
+      } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+        if (ch === "\r" && next === "\n") i++;
+        row.push(cell);
+        rows.push(row);
+        row = [];
+        cell = "";
+      } else {
+        cell += ch;
+      }
+    }
+
+    if (cell.length || row.length) {
+      row.push(cell);
+      rows.push(row);
+    }
+
+    return rows;
+  };
+
+  const num = v => Number(String(v || "").replace(/[^0-9.-]/g, "")) || 0;
+  const isSaturday = v => v ? new Date(v + "T12:00:00").getDay() === 6 : false;
+
+  const disclaimer = cfg => {
+    const parts = [
+      `${money(cfg.barMinimum)} bar minimum`,
+      `${money(cfg.barSecurity)} bar security fee`
+    ];
+    if (cfg.barSetup > 0) parts.push(`${money(cfg.barSetup)} bar setup fee`);
+    return `* The bar price is determined on a basis of a ${parts.join(", a ")}.`;
+  };
+
+  const render = cfg => {
+    const bg = cleanHex(cfg.bg, "775F5F");
+    const fg = cleanHex(cfg.fg, "FFFFFF");
+
+    root.innerHTML = `
+      <style>
+        #pricing-calculator {
+          font-family: Inter, Arial, sans-serif;
+          max-width: 520px;
+          margin: 0 auto;
+        }
+        .pc-card {
+          background: #${bg};
+          color: #${fg};
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 10px 30px rgba(0,0,0,.14);
+        }
+        .pc-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .pc-title {
+          font-size: 22px;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+        .pc-logo {
+          width: 42px;
+          height: 42px;
+          object-fit: contain;
+          flex: 0 0 auto;
+        }
+        .pc-group { margin-bottom: 18px; }
+        .pc-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+        .pc-input, .pc-range {
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .pc-input {
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.2);
+          background: rgba(255,255,255,.08);
+          color: inherit;
+        }
+        .pc-row, .pc-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .pc-toggle {
+          padding: 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.2);
+          background: rgba(255,255,255,.08);
+        }
+        .pc-results {
+          margin-top: 20px;
+          padding: 16px;
+          border-radius: 14px;
+          background: rgba(255,255,255,.08);
+        }
+        .pc-total-label {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: .08em;
+          opacity: .8;
+        }
+        .pc-total {
+          font-size: 42px;
+          font-weight: 800;
+          margin: 6px 0 14px;
+        }
+        .pc-item {
+          font-size: 15px;
+          margin: 8px 0;
+        }
+        .pc-divider {
+          height: 1px;
+          background: rgba(255,255,255,.18);
+          margin: 12px 0;
+        }
+        .pc-button {
+          display: block;
+          margin-top: 18px;
+          text-align: center;
+          text-decoration: none;
+          padding: 14px 16px;
+          border-radius: 12px;
+          background: #fff;
+          color: #222;
+          font-weight: 700;
+        }
+        .pc-note {
+          margin-top: 12px;
+          font-size: 13px;
+          line-height: 1.4;
+          opacity: .9;
+        }
+      </style>
+
+      <div class="pc-card">
+        <div class="pc-header">
+          <div class="pc-title">${cfg.title}</div>
+          ${cfg.logo ? `<img class="pc-logo" src="${cfg.logo}" alt="Logo" onerror="this.remove()">` : ""}
+        </div>
+
+        <div class="pc-group">
+          <label class="pc-label" for="pc-date">Event Date</label>
+          <input class="pc-input" id="pc-date" type="date">
+        </div>
+
+        <div class="pc-group">
+          <div class="pc-row">
+            <label class="pc-label" for="pc-guests" style="margin:0;">Guest Count</label>
+            <strong><span id="pc-guests-value">${cfg.minGuests}</span></strong>
+          </div>
+          <input class="pc-range" id="pc-guests" type="range" min="${cfg.minGuests}" max="${cfg.maxGuests}" step="1" value="${cfg.minGuests}">
+        </div>
+
+        <div class="pc-group">
+          <div class="pc-toggle pc-row">
+            <div>
+              <div style="font-weight:700;">Add Bar</div>
+              <div style="font-size:13px;opacity:.85;">${money(cfg.barPrice)} add-on</div>
+            </div>
+            <input id="pc-bar" type="checkbox">
+          </div>
+        </div>
+
+        <div class="pc-results">
+          <div class="pc-total-label">Estimated Total</div>
+          <div class="pc-total" id="pc-total">${money(0)}</div>
+          <div id="pc-items"></div>
+          <a class="pc-button" href="${FORM_URL}" target="_blank" rel="noopener noreferrer">Inquire Today</a>
+          <div class="pc-note" id="pc-note" style="display:none;"></div>
+        </div>
+      </div>
+    `;
+
+    const dateEl = root.querySelector("#pc-date");
+    const guestsEl = root.querySelector("#pc-guests");
+    const guestsValueEl = root.querySelector("#pc-guests-value");
+    const barEl = root.querySelector("#pc-bar");
+    const totalEl = root.querySelector("#pc-total");
+    const itemsEl = root.querySelector("#pc-items");
+    const noteEl = root.querySelector("#pc-note");
+
+    const update = () => {
+      const guests = Number(guestsEl.value);
+      const hasBar = barEl.checked;
+      const saturday = isSaturday(dateEl.value);
+
+      const venue = saturday ? cfg.saturdayVenue : cfg.otherVenue;
+      const catering = guests * cfg.cateringPerPerson;
+      const venueAndCatering = venue + catering;
+      const bar = hasBar ? cfg.barPrice : 0;
+      const total = venueAndCatering + bar;
+
+      guestsValueEl.textContent = guests;
+      totalEl.textContent = money(total);
+
+      itemsEl.innerHTML = `
+        <div class="pc-item"><span>${saturday ? "Venue (Saturday)" : "Venue"}</span><strong>${money(venue)}</strong></div>
+        <div class="pc-item"><span>Catering (${guests} × ${money(cfg.cateringPerPerson)})</span><strong>${money(catering)}</strong></div>
+        <div class="pc-divider"></div>
+        <div class="pc-item"><span>Venue + Catering</span><strong>${money(venueAndCatering)}</strong></div>
+        ${hasBar ? `<div class="pc-item"><span>Bar*</span><strong>${money(bar)}</strong></div>` : ""}
+      `;
+
+      if (hasBar) {
+        noteEl.style.display = "block";
+        noteEl.textContent = disclaimer(cfg);
+      } else {
+        noteEl.style.display = "none";
+        noteEl.textContent = "";
+      }
+    };
+
+    guestsEl.addEventListener("input", update);
+    dateEl.addEventListener("input", update);
+    barEl.addEventListener("change", update);
+    update();
+  };
+
+  root.textContent = "Loading calculator...";
+
+  fetch(DATA_URL)
+    .then(r => r.text())
+    .then(text => {
+      const rows = parseCSV(text);
+
+      // range B1:C12 means:
+      // rows[0][0] = B1
+      // rows[4][0] = B5
+      // rows[4][1] = C5
+      const cfg = {
+        logo: (rows[0] && rows[0][0]) || "",
+        bg: (rows[1] && rows[1][0]) || "775F5F",
+        fg: (rows[2] && rows[2][0]) || "FFFFFF",
+        title: (rows[3] && rows[3][0]) || "Wedding Pricing Calculator",
+        minGuests: num(rows[4] && rows[4][0]),
+        maxGuests: num(rows[4] && rows[4][1]),
+        saturdayVenue: num(rows[5] && rows[5][0]),
+        otherVenue: num(rows[6] && rows[6][0]),
+        cateringPerPerson: num(rows[7] && rows[7][0]),
+        barPrice: num(rows[8] && rows[8][0]),
+        barMinimum: num(rows[9] && rows[9][0]),
+        barSecurity: num(rows[10] && rows[10][0]),
+        barSetup: num(rows[11] && rows[11][0])
+      };
+
+      render(cfg);
+    })
+    .catch(err => {
+      console.error(err);
+      root.textContent = "Calculator could not load.";
+    });
+})();
+</script>
