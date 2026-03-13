@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embed Testing</title>
+  <style>
+    :root {
+      --bg: #05070c;
+      --panel: rgba(10, 18, 28, 0.82);
+      --panel-border: rgba(255, 255, 255, 0.18);
+      --glow: rgba(125, 210, 255, 0.14);
+      --text: #f5f7fa;
+      --muted: rgba(255, 255, 255, 0.55);
+      --line: rgba(255, 255, 255, 0.9);
+      --accent: #99d8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Courier New", Courier, monospace;
+      overflow-x: hidden;
+    }
+
+    body {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(120,180,255,0.06), transparent 24%),
+        radial-gradient(circle at 80% 15%, rgba(120,180,255,0.04), transparent 20%),
+        radial-gradient(circle at 50% 80%, rgba(255,255,255,0.03), transparent 28%),
+        linear-gradient(180deg, #04060b 0%, #070b12 100%);
+    }
+
+    /* subtle star field */
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background-image:
+        radial-gradient(1px 1px at 8% 14%, rgba(255,255,255,0.45) 50%, transparent 51%),
+        radial-gradient(1px 1px at 17% 72%, rgba(255,255,255,0.35) 50%, transparent 51%),
+        radial-gradient(1px 1px at 28% 48%, rgba(255,255,255,0.30) 50%, transparent 51%),
+        radial-gradient(1px 1px at 39% 24%, rgba(255,255,255,0.40) 50%, transparent 51%),
+        radial-gradient(1px 1px at 52% 66%, rgba(255,255,255,0.30) 50%, transparent 51%),
+        radial-gradient(1px 1px at 61% 36%, rgba(255,255,255,0.35) 50%, transparent 51%),
+        radial-gradient(1px 1px at 72% 58%, rgba(255,255,255,0.28) 50%, transparent 51%),
+        radial-gradient(1px 1px at 84% 18%, rgba(255,255,255,0.40) 50%, transparent 51%),
+        radial-gradient(1px 1px at 91% 77%, rgba(255,255,255,0.32) 50%, transparent 51%);
+      opacity: 0.55;
+    }
+
+    body::after {
+      background-image:
+        radial-gradient(1px 1px at 12% 88%, rgba(255,255,255,0.20) 50%, transparent 51%),
+        radial-gradient(1px 1px at 24% 10%, rgba(255,255,255,0.18) 50%, transparent 51%),
+        radial-gradient(1px 1px at 47% 31%, rgba(255,255,255,0.16) 50%, transparent 51%),
+        radial-gradient(1px 1px at 67% 84%, rgba(255,255,255,0.18) 50%, transparent 51%),
+        radial-gradient(1px 1px at 79% 42%, rgba(255,255,255,0.16) 50%, transparent 51%);
+      opacity: 0.45;
+    }
+
+    .console-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1100px, 100%);
+      min-height: 78vh;
+      padding: 28px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      backdrop-filter: blur(4px);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 0 40px rgba(0,0,0,0.45),
+        0 0 60px var(--glow);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      padding-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .topbar .brand {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .status {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .status span::before {
+      content: "■ ";
+      color: var(--accent);
+    }
+
+    .main {
+      display: grid;
+      place-items: center;
+      position: relative;
+      padding: 20px 10px 10px;
+    }
+
+    .embed-stage {
+      position: relative;
+      display: inline-block;
+      padding: 18px; /* creates the space between content and line border */
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.015);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 0 26px rgba(153, 216, 255, 0.08);
+    }
+
+    .embed-wrap {
+      display: inline-block;
+      background: #fff;
+      line-height: 0;
+    }
+
+    .embed-wrap iframe {
+      display: block;
+      border: 0;
+      background: #fff;
+    }
+
+    .callout {
+      position: absolute;
+      left: 50%;
+      top: max(20px, calc(50% - 230px));
+      transform: translateX(-340px) rotate(-5deg);
+      color: #fff;
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 10px rgba(255,255,255,0.15);
+      white-space: nowrap;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .callout svg {
+      display: block;
+      margin-top: 8px;
+      overflow: visible;
+    }
+
+    .footer {
+      border-top: 1px solid rgba(255,255,255,0.10);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 900px) {
+      .callout {
+        position: static;
+        transform: none;
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      .callout svg {
+        margin-inline: auto;
+        transform: rotate(18deg);
+      }
+
+      .main {
+        padding-top: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .console-shell {
+        padding: 18px;
+      }
+
+      .embed-stage {
+        padding: 12px;
+      }
+
+      .embed-wrap iframe {
+        width: min(100%, 380px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="console-shell">
+    <div class="topbar">
+      <div class="brand">Embed Testing // Mission Console</div>
+      <div class="status">
+        <span>Signal Stable</span>
+        <span>Visual Feed Live</span>
+        <span>Frame Ready</span>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="callout">
+        Check this out!
+        <svg width="180" height="100" viewBox="0 0 180 100" aria-hidden="true">
+          <path
+            d="M8 14 C 56 10, 98 26, 132 54 S 163 78, 165 80"
+            fill="none"
+            stroke="white"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+          <path
+            d="M152 73 L166 80 L154 91"
+            fill="none"
+            stroke="white"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+
+      <div class="embed-stage">
+        <div class="embed-wrap">
+          <iframe
+            src="embed.html"
+            title="Embed Test Frame"
+            width="800"
+            height="500"
+            loading="lazy">
+          </iframe>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>NASA-style test environment</div>
+      <div>Embedded output routed from embed.html</div>
+    </div>
+  </div>
+</body>
+</html>
